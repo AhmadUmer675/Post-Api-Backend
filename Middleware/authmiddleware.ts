@@ -1,42 +1,16 @@
+import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
-import jwt, { JwtPayload } from "jsonwebtoken";
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: { id: number };
-    }
-  }
-}
+export function authenticateUser(req: Request, res: Response, next: NextFunction) {
+  const token = req.headers.authorization?.split(" ")[1];
 
-interface TokenPayload extends JwtPayload {
-  id: number;
-}
+  if (!token) return res.status(401).json({ message: "Unauthorized" });
 
-const auth = (req: Request, res: Response, next: NextFunction): void => {
   try {
-    const header = req.header("Authorization");
-    if (!header) {
-      res.status(401).json({
-        success: false,
-        message: "Authorization header required",
-      });
-      return;
-    }
-
-    const token = header.replace(/^Bearer\s+/i, "");
-    const secret = process.env.JWT_SECRET as string;
-    const decoded = jwt.verify(token, secret) as TokenPayload;
-
-    // Attach the user ID to the request
-    req.user = { id: decoded.id };
+    const decoded = jwt.verify(token, "your_jwt_secret");
+    req.user = decoded;
     next();
-  } catch (error) {
-    res.status(401).json({
-      success: false,
-      message: "Invalid or missing token",
-    });
+  } catch (err) {
+    res.status(401).json({ message: "Invalid token" });
   }
-};
-
-export default auth;
+}
